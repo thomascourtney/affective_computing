@@ -8,6 +8,8 @@ from tensorflow.keras import Model
 import matplotlib.pyplot as plt
 from tensorflow.keras.applications.vgg16 import VGG16
 import matplotlib.image as mpimg
+from skimage.filters import prewitt_h,prewitt_v
+
 
 
 class Data:
@@ -54,37 +56,29 @@ class Data:
         )
 
 
+class FeatureExtractor:
+    def __init__(self, data):
+        if not isinstance(data, Data):
+            raise TypeError("data must be of type Data")
+        self.data = data
+
+    def edge_creator(self, images):
+        edges_horizontal = []
+        edges_vertical = []
+        for image in images:
+            # Calculating horizontal edges using Prewitt kernel
+            edges_prewitt_horizontal = prewitt_h(image)
+            # Calculating vertical edges using Prewitt kernel
+            edges_prewitt_vertical = prewitt_v(image)
+            edges_horizontal.append(edges_prewitt_horizontal)
+            edges_vertical.append(edges_prewitt_vertical)
+        return edges_horizontal, edges_vertical
+
 data = Data()
-train_netrual, test_netural, train_happy, test_happy = data.get_train_and_test()
-print(len(test_netural))
+feature_extractor = FeatureExtractor(data)
+train_neutral, test_neutral, train_happy, test_happy = data.get_train_and_test()
+print(len(test_neutral))
 
-
-def plot():
-    # Set up matplotlib fig, and size it to fit 4x4 pics
-    nrows = 4
-    ncols = 4
-
-    fig = plt.gcf()
-    fig.set_size_inches(ncols*4, nrows*4)
-    pic_index = 100
-    train_cat_fnames = os.listdir( train_netrual )
-    train_dog_fnames = os.listdir( train_dogs_dir )
-
-
-    next_cat_pix = [os.path.join(train_cats_dir, fname) 
-                    for fname in train_cat_fnames[ pic_index-8:pic_index] 
-                ]
-
-    next_dog_pix = [os.path.join(train_dogs_dir, fname) 
-                    for fname in train_dog_fnames[ pic_index-8:pic_index]
-                ]
-
-    for i, img_path in enumerate(next_cat_pix+next_dog_pix):
-    # Set up subplot; subplot indices start at 1
-    sp = plt.subplot(nrows, ncols, i + 1)
-    sp.axis('Off') # Don't show axes (or gridlines)
-
-    img = mpimg.imread(img_path)
-    plt.imshow(img)
-
-    plt.show()
+# Extracting edges for the neutral and happy images
+neutral_horizontal_edges, neutral_vertical_edges = feature_extractor.edge_creator(train_neutral)
+happy_horizontal_edges, happy_vertical_edges = feature_extractor.edge_creator(train_happy)
