@@ -1,6 +1,7 @@
 import glob
 from PIL import Image
 import random
+import numpy as np
 import tensorflow as tf 
 from tensorflow.keras.preprocessing.image import ImageDataGenerator 
 from tensorflow.keras import layers 
@@ -9,8 +10,6 @@ import matplotlib.pyplot as plt
 from tensorflow.keras.applications.vgg16 import VGG16
 import matplotlib.image as mpimg
 from skimage.filters import prewitt_h,prewitt_v
-
-
 
 class Data:
     def __init__(self):
@@ -58,18 +57,18 @@ class Data:
 
 class FeatureExtractor:
     def __init__(self, data):
-        if not isinstance(data, Data):
-            raise TypeError("data must be of type Data")
         self.data = data
 
     def edge_creator(self, images):
         edges_horizontal = []
         edges_vertical = []
         for image in images:
+            # Convert PIL Image to numpy array
+            image_array = np.array(image)
             # Calculating horizontal edges using Prewitt kernel
-            edges_prewitt_horizontal = prewitt_h(image)
+            edges_prewitt_horizontal = prewitt_h(image_array)
             # Calculating vertical edges using Prewitt kernel
-            edges_prewitt_vertical = prewitt_v(image)
+            edges_prewitt_vertical = prewitt_v(image_array)
             edges_horizontal.append(edges_prewitt_horizontal)
             edges_vertical.append(edges_prewitt_vertical)
         return edges_horizontal, edges_vertical
@@ -82,3 +81,4 @@ print(len(test_neutral))
 # Extracting edges for the neutral and happy images
 neutral_horizontal_edges, neutral_vertical_edges = feature_extractor.edge_creator(train_neutral)
 happy_horizontal_edges, happy_vertical_edges = feature_extractor.edge_creator(train_happy)
+print(happy_horizontal_edges)
