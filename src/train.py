@@ -11,62 +11,62 @@ from tensorflow.keras.applications.vgg16 import VGG16
 from tensorflow.keras.applications import ResNet50
 import matplotlib.image as mpimg
 from skimage.filters import prewitt_h, prewitt_v
-
-import os
-import numpy as np
+import csv
+# set seed
 random.seed(42)
 
+
+
+import os
+
 class Data:
-    def __init__(self):
+    def __init__(self, pattern, directory):
+        """
+        Input
+        ----------
+        - pattern: string of where to get the annotations.csv file from (e.g. "../data/annotations.csv")
+        - directory: string of where to get the image data from (e.g. "../data")
+        
+        """
+
         self.image_list = []
         self.labels = []
+        self.pattern = pattern
+        self.directory = directory
 
-    def load_images(self, pattern, label):
-        files = glob(pattern)
-
-        for file in files:
-            im = Image.open(file)
-            self.image_list.append(im)
-            self.labels.append(label)
-
-        random.shuffle(self.image_list)
-        random.shuffle(self.labels)
+    def load_data_from_csv(self, csv_file):
+        with open(csv_file, 'r') as file:
+            reader = csv.reader(file)
+            for row in reader:
+                # Assuming the first column contains the file names and the second column contains the labels
+                file_name, label = row[0], row[1]
+                file_path = os.path.join(self.directory, file_name)  # Construct the file path
+                im = Image.open(file_path)
+                im_array = np.array(im)  # Convert PIL Image to NumPy array
+                self.image_list.append(im_array)
+                self.labels.append(label)
 
     def get_data_and_labels(self):
         if not self.image_list or not self.labels:
-            # neutral are 0, happy are 1
-            self.load_images("../data/*a.jpg", 0)
-            self.load_images("../data/*b.jpg", 1)
+            self.load_data_from_csv(self.pattern)
 
-        # Convert image list and labels to numpy arrays
-        self.image_list = np.array(self.image_list)
+        # Convert labels to numpy array
         self.labels = np.array(self.labels)
-
+        random.shuffle(self.image_list)
+        random.shuffle(self.labels)
         return self.image_list, self.labels
 
-
-data = Data()
-data.get_data_and_labels()
-print(data.image_list, data.labels)
+data = Data("../data/annotations.csv", "../data")
+image_list, labels = data.get_data_and_labels()
 
 
-class FeatureExtractor:
-    def __init__(self, data):
-        self.data = data
+train_len = int(len(image_list) * 0.8)
+train_data, test_data = image_list[:train_len], image_list[train_len:]
+train_labels, test_labels = labels[:train_len], labels[train_len:]
 
-    def edge_creator(self, images):
-        edges_horizontal = []
-        edges_vertical = []
-        for image in images:
-            # Convert PIL Image to numpy array
-            image_array = np.array(image)
-            # Calculating horizontal edges using Prewitt kernel
-            edges_prewitt_horizontal = prewitt_h(image_array)
-            # Calculating vertical edges using Prewitt kernel
-            edges_prewitt_vertical = prewitt_v(image_array)
-            edges_horizontal.append(edges_prewitt_horizontal)
-            edges_vertical.append(edges_prewitt_vertical)
-        return edges_horizontal, edges_vertical
+print(len(test_labels))
+
+
 
 
 
@@ -100,25 +100,3 @@ class ModelBuilder:
         self.model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
 
 
-# Create an instance of the Data class
-data = Data()
-
-# Load and preprocess the data
-train_data_neutral, test_data_neutral, train_data_happy, test_data_happy = data.get_train_and_test()
-
-# Convert images to numpy arrays and preprocess them (resize, rescale, etc.)
-# Define your preprocessing steps based on the requirements of the ResNet50 model
-
-# Create an instance of the ModelBuilder class
-model_builder = ModelBuilder()
-
-# Build and compile the ResNet50 model
-model_builder.build_model()
-model_builder.compile_model()
-
-# Train the model using your training data
-history = model_builder.model.fit(train_data, train_labels, epochs=10, validation_data=(test_data, test_labels))
-
-# Evaluate the model on your test data
-test_loss, test_acc = model_builder.model.evaluate(test_data, test_labels)
-print('Test accuracy:', test_acc)
